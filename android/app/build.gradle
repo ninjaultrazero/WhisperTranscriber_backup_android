@@ -7,7 +7,7 @@ react {
     autolinkLibrariesWithApp()
 }
 android {
-    ndkVersion "26.1.10909125"
+    android.ndk.version="27.0.12077973"
     compileSdk 34
     namespace "com.whispertranscriber"
     defaultConfig {
