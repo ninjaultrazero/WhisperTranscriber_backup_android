@@ -1,0 +1,44 @@
+diff --git a/node_modules/react-native-receive-sharing-intent/android/build.gradle b/node_modules/react-native-receive-sharing-intent/android/build.gradle
+index 02cc8f2..fa8b426 100644
+--- a/node_modules/react-native-receive-sharing-intent/android/build.gradle
++++ b/node_modules/react-native-receive-sharing-intent/android/build.gradle
+@@ -4,7 +4,7 @@ buildscript {
+ 
+   repositories {
+     google()
+-    jcenter()
++    mavenCentral()
+   }
+ 
+   dependencies {
+@@ -52,7 +52,6 @@ android {
+ 
+ repositories {
+   mavenCentral()
+-  jcenter()
+   google()
+ 
+   def found = false
+diff --git a/node_modules/react-native-receive-sharing-intent/android/src/main/java/com/reactnativereceivesharingintent/ReceiveSharingIntentHelper.java b/node_modules/react-native-receive-sharing-intent/android/src/main/java/com/reactnativereceivesharingintent/ReceiveSharingIntentHelper.java
+index 69126eb..b411774 100644
+--- a/node_modules/react-native-receive-sharing-intent/android/src/main/java/com/reactnativereceivesharingintent/ReceiveSharingIntentHelper.java
++++ b/node_modules/react-native-receive-sharing-intent/android/src/main/java/com/reactnativereceivesharingintent/ReceiveSharingIntentHelper.java
+@@ -29,6 +29,10 @@ public class ReceiveSharingIntentHelper {
+   @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+   public void sendFileNames(Context context, Intent intent, Promise promise){
+     try {
++      if (intent == null) {
++        promise.reject("error", "Intent is null");
++        return;
++      }
+       String action = intent.getAction();
+       String type = intent.getType();
+       if(type == null) { return; }
+@@ -165,6 +169,7 @@ public class ReceiveSharingIntentHelper {
+ 
+ 
+   public void clearFileNames(Intent intent){
++    if (intent == null) return;
+     String type = intent.getType();
+     if(type == null) return;
+     if (type.startsWith("text")) {
