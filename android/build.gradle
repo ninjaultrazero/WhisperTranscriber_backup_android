@@ -4,7 +4,7 @@ buildscript {
         minSdkVersion = 24
         compileSdkVersion = 34
         targetSdkVersion = 34
-        ndkVersion = "27.0.12077973"
+        ndkVersion = "26.1.10909125"
         kotlinVersion = "2.1.0"
     }
     repositories {
@@ -12,58 +12,31 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:8.2.2")
+        classpath("com.android.tools.build:gradle:8.2.1")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
+
     }
 }
 
-subprojects {
-    configurations.all {
-        resolutionStrategy {
-            force "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
 
-            // FORZA Gradle a sostituire QUALSIASI richiesta di moduli ffmpeg-kit
-            // (https, video, full, ecc.) con il nostro file locale.
-            dependencySubstitution {
-                all { DependencySubstitution dependency ->
-                    if (dependency.requested instanceof ModuleComponentSelector &&
-                            dependency.requested.group == 'com.arthenica') {
-                        // Diciamo a Gradle che la dipendenza è soddisfatta dal progetto app
-                        dependency.useTarget project(':app')
-                    }
-                }
+    // Questo blocco intercetta il modulo bridge e gli dà il file .aar
+    afterEvaluate { project ->
+        if (project.name == 'ffmpeg-kit-react-native') {
+            project.dependencies {
+                // USA IL TUO PERCORSO ASSOLUTO QUI
+                compileOnly files("C:/Users/pasqu/StudioProjects/WhisperTranscriber_backup_android/android/app/libs/ffmpeg-kit-full-6.0-2.aar")
             }
         }
     }
 
-    afterEvaluate { project ->
-        // Fix Namespace (lascialo com'era)
-        if (project.hasProperty('android')) {
-            project.android {
-                if (namespace == null) {
-                    try {
-                        def manifestFile = project.file("src/main/AndroidManifest.xml")
-                        if (manifestFile.exists()) {
-                            def xml = new XmlParser().parse(manifestFile)
-                            def pkg = xml.attribute("package")
-                            if (pkg != null) namespace = pkg
-                        }
-                    } catch (Exception e) {
-                        namespace = "com.${project.name.replace("-", ".")}"
-                    }
-                }
-            }
-        }
-
-        // INIEZIONE FORZATA: se il modulo è ffmpeg-kit-react-native,
-        // gli iniettiamo il file .aar ignorando le sue dipendenze interne
-        if (project.name == "ffmpeg-kit-react-native") {
-            project.configurations.all {
-                exclude group: 'com.arthenica' // Ignora quello che vorrebbe scaricare lui
-            }
-            project.dependencies {
-                implementation files("${rootProject.projectDir}/app/libs/ffmpeg-kit-full-6.0-2.aar")
-            }
-        }
+    // Blocchiamo la ricerca online di altri pezzi
+    configurations.all {
+        exclude group: 'com.arthenica', module: 'ffmpeg-kit-https'
+        exclude group: 'com.arthenica', module: 'ffmpeg-kit-platforms'
     }
 }

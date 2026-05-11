@@ -19,6 +19,25 @@ android {
         targetSdkVersion 34
         versionCode 1
         versionName "1.0"
+
+        // Fondamentale per Whisper (C++)
+        externalNativeBuild {
+            cmake {
+                abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+            }
+        }
+
+        // Fondamentale per FFmpeg e emulatori
+        ndk {
+            abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+        }
+    }
+
+    // Serve per compilare il codice nativo di Whisper
+    externalNativeBuild {
+        cmake {
+            path "CMakeLists.txt"
+        }
     }
 
     compileOptions {
@@ -35,13 +54,37 @@ android {
             useLegacyPackaging = true
             keepDebugSymbols += ["**/*.so"]
         }
+        // Risolve i conflitti di librerie duplicate tra RN e FFmpeg
+        resources {
+            pickFirsts += [
+                    '**/libc++_shared.so',
+                    '**/libfbjni.so',
+                    '**/libreactnativejni.so',
+                    '**/libjscexecutor.so',
+                    '**/libhermes.so'
+            ]
+        }
     }
 }
 
 dependencies {
     implementation("com.facebook.react:react-android")
-    implementation("com.facebook.react:hermes-android")
-    implementation files("libs/ffmpeg-kit-full-6.0-2.aar")
+
+    // Carichiamo il file AAR locale usando il tuo percorso assoluto
+    implementation files("C:/Users/pasqu/StudioProjects/WhisperTranscriber_backup_android/android/app/libs/ffmpeg-kit-full-6.0-2.aar")
+
+    implementation 'com.arthenica:smart-exception-java:0.2.1'
+
+    // Colleghiamo il modulo bridge ignorando le sue ricerche online
+    implementation(project(':ffmpeg-kit-react-native')) {
+        transitive = false
+    }
+
+    if (hermesEnabled.toBoolean()) {
+        implementation("com.facebook.react:hermes-android")
+    } else {
+        implementation jscFlavor
+    }
 }
 
 apply from: "../../node_modules/react-native-vector-icons/fonts.gradle"

@@ -34,12 +34,7 @@ class MainApplication : Application(), ReactApplication {
 
     override fun onCreate() {
         super.onCreate()
-        // Inizializza SoLoader con il mapping corretto per evitare UnsatisfiedLinkError
+        // Inizializzazione corretta per React Native 0.74+
         SoLoader.init(this, false)
-        
-        if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
-            // Carica la libreria nativa per la New Architecture se abilitata
-            load()
-        }
     }
 }

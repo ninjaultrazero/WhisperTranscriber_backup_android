@@ -19,10 +19,10 @@ rootProject.name = 'WhisperTranscriber'
 include ':app'
 
 dependencyResolutionManagement {
+    // Cambia da PREFER_SETTINGS a PREFER_PROJECT
     repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
     repositories {
         google()
         mavenCentral()
-
     }
 }
