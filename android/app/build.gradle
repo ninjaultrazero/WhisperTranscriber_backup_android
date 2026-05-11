@@ -3,37 +3,33 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("com.facebook.react")
 }
+
 react {
     autolinkLibrariesWithApp()
 }
+
 android {
     ndkVersion "27.0.12077973"
     compileSdk 34
     namespace "com.whispertranscriber"
+
     defaultConfig {
         applicationId "com.whispertranscriber"
         minSdkVersion 24
         targetSdkVersion 34
         versionCode 1
         versionName "1.0"
-        externalNativeBuild {
-            cmake {
-                abiFilters "arm64-v8a", "x86_64"
-            }
-        }
     }
-    externalNativeBuild {
-        cmake {
-            path "CMakeLists.txt"
-        }
-    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+
     kotlinOptions {
         jvmTarget = "17"
     }
+
     packaging {
         jniLibs {
             useLegacyPackaging = true
@@ -41,9 +37,11 @@ android {
         }
     }
 }
+
 dependencies {
     implementation("com.facebook.react:react-android")
     implementation("com.facebook.react:hermes-android")
-    implementation project(':ffmpeg-kit-react-native')
+    implementation files("libs/ffmpeg-kit-full-6.0-2.aar")
 }
+
 apply from: "../../node_modules/react-native-vector-icons/fonts.gradle"

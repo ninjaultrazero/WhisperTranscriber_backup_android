@@ -12,17 +12,58 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:8.1.0")
+        classpath("com.android.tools.build:gradle:8.2.2")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
     }
 }
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-        flatDir {
-            dirs 'libs' // Questo dice a Gradle: "Guarda anche qui dentro!"
-	    dirs "${rootProject.projectDir}/../node_modules/ffmpeg-kit-react-native/android/libs"
+
+subprojects {
+    configurations.all {
+        resolutionStrategy {
+            force "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+
+            // FORZA Gradle a sostituire QUALSIASI richiesta di moduli ffmpeg-kit
+            // (https, video, full, ecc.) con il nostro file locale.
+            dependencySubstitution {
+                all { DependencySubstitution dependency ->
+                    if (dependency.requested instanceof ModuleComponentSelector &&
+                            dependency.requested.group == 'com.arthenica') {
+                        // Diciamo a Gradle che la dipendenza è soddisfatta dal progetto app
+                        dependency.useTarget project(':app')
+                    }
+                }
+            }
+        }
+    }
+
+    afterEvaluate { project ->
+        // Fix Namespace (lascialo com'era)
+        if (project.hasProperty('android')) {
+            project.android {
+                if (namespace == null) {
+                    try {
+                        def manifestFile = project.file("src/main/AndroidManifest.xml")
+                        if (manifestFile.exists()) {
+                            def xml = new XmlParser().parse(manifestFile)
+                            def pkg = xml.attribute("package")
+                            if (pkg != null) namespace = pkg
+                        }
+                    } catch (Exception e) {
+                        namespace = "com.${project.name.replace("-", ".")}"
+                    }
+                }
+            }
+        }
+
+        // INIEZIONE FORZATA: se il modulo è ffmpeg-kit-react-native,
+        // gli iniettiamo il file .aar ignorando le sue dipendenze interne
+        if (project.name == "ffmpeg-kit-react-native") {
+            project.configurations.all {
+                exclude group: 'com.arthenica' // Ignora quello che vorrebbe scaricare lui
+            }
+            project.dependencies {
+                implementation files("${rootProject.projectDir}/app/libs/ffmpeg-kit-full-6.0-2.aar")
+            }
         }
     }
 }
