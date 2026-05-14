@@ -6,6 +6,8 @@ plugins {
 
 react {
     autolinkLibrariesWithApp()
+    newArchEnabled = false
+    hermesEnabled = true
 }
 
 android {
@@ -24,12 +26,8 @@ android {
         externalNativeBuild {
             cmake {
                 abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
+                arguments "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
             }
-        }
-
-        // Fondamentale per FFmpeg e emulatori
-        ndk {
-            abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
         }
     }
 
@@ -70,15 +68,13 @@ android {
 dependencies {
     implementation("com.facebook.react:react-android")
 
-    // Carichiamo il file AAR locale usando il tuo percorso assoluto
-    implementation files("C:/Users/pasqu/StudioProjects/WhisperTranscriber_backup_android/android/app/libs/ffmpeg-kit-full-6.0-2.aar")
+    // FFmpeg con supporto 16KB
+    implementation 'com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.1.1'
 
     implementation 'com.arthenica:smart-exception-java:0.2.1'
 
-    // Colleghiamo il modulo bridge ignorando le sue ricerche online
-    implementation(project(':ffmpeg-kit-react-native')) {
-        transitive = false
-    }
+    // Colleghiamo il modulo bridge
+    implementation(project(':ffmpeg-kit-react-native'))
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")

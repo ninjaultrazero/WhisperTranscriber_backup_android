@@ -4,7 +4,7 @@ buildscript {
         minSdkVersion = 24
         compileSdkVersion = 34
         targetSdkVersion = 34
-        ndkVersion = "26.1.10909125"
+        ndkVersion = "27.0.12077973"
         kotlinVersion = "2.1.0"
     }
     repositories {
@@ -12,7 +12,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:8.2.1")
+        classpath("com.android.tools.build:gradle:8.5.1")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
 
     }
@@ -24,18 +24,53 @@ allprojects {
         mavenCentral()
     }
 
-    // Questo blocco intercetta il modulo bridge e gli dà il file .aar
-    afterEvaluate { project ->
-        if (project.name == 'ffmpeg-kit-react-native') {
-            project.dependencies {
-                // USA IL TUO PERCORSO ASSOLUTO QUI
-                compileOnly files("C:/Users/pasqu/StudioProjects/WhisperTranscriber_backup_android/android/app/libs/ffmpeg-kit-full-6.0-2.aar")
+    // Configurazione per il supporto 16KB nei moduli nativi
+    subprojects {
+        afterEvaluate { project ->
+            if (project.hasProperty('android')) {
+                project.android {
+                    ndkVersion = rootProject.ext.ndkVersion
+                    
+                    if (project.name == 'whisper.rn') {
+                        defaultConfig {
+                            externalNativeBuild {
+                                cmake {
+                                    // Usiamo listProperty o += se possibile, altrimenti ricostruiamo i minimi necessari
+                                    arguments "-DANDROID_STL=c++_shared",
+                                              "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON",
+                                              "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384"
+                                }
+                            }
+                        }
+                    } else if (project.android.hasProperty('externalNativeBuild') && project.android.externalNativeBuild.hasProperty('cmake')) {
+                        defaultConfig {
+                            externalNativeBuild {
+                                cmake {
+                                    arguments "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 
-    // Blocchiamo la ricerca online di altri pezzi
+    // Questo blocco intercetta il modulo bridge e gli dà il file .aar
+    afterEvaluate { project ->
+        if (project.name == 'ffmpeg-kit-react-native') {
+            project.dependencies {
+                compileOnly 'com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.1.1'
+            }
+        }
+    }
+
+    // Forza la versione di React Native per tutti i moduli
     configurations.all {
+        resolutionStrategy {
+            force "com.facebook.react:react-android:0.85.2"
+            force "com.facebook.react:hermes-android:0.85.2"
+        }
         exclude group: 'com.arthenica', module: 'ffmpeg-kit-https'
         exclude group: 'com.arthenica', module: 'ffmpeg-kit-platforms'
     }
