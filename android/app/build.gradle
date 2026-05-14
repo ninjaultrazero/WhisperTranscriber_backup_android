@@ -22,6 +22,9 @@ android {
         versionCode 1
         versionName "1.0"
 
+        buildConfigField("boolean", "IS_NEW_ARCHITECTURE_ENABLED", "false")
+        buildConfigField("boolean", "IS_HERMES_ENABLED", "true")
+
         // Fondamentale per Whisper (C++)
         externalNativeBuild {
             cmake {
