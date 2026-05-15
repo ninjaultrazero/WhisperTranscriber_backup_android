@@ -55,8 +55,8 @@ export default function App() {
             {/* CARD STATO MODELLO */}
             <Card style={styles.card} mode="contained">
               <Card.Title
-                title="Stato del Modello"
-                subtitle={isModelReady ? "Medium Tiny caricato" : "Modello non presente"}
+                title="Stato del Modello AI"
+                subtitle={isModelReady ? "Modello Tiny caricato" : "Modello non presente"}
                 left={(props) => (
                   <Avatar.Icon 
                     {...props} 

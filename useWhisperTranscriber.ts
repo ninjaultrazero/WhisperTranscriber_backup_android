@@ -12,6 +12,7 @@ const MODEL_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggm
 export function useWhisperTranscriber() {
   const [status, setStatus] = useState<'IDLE' | 'DOWNLOADING' | 'CONVERTING' | 'TRANSCRIBING'>('IDLE');
   const [isModelReady, setIsModelReady] = useState(false);
+  const isModelReadyRef = useRef(false); // Ref per evitare closure stale negli intent
   const [progress, setProgress] = useState(0);
   const [transcription, setTranscription] = useState('');
   const [logs, setLogs] = useState<string[]>([]);
@@ -21,15 +22,28 @@ export function useWhisperTranscriber() {
     setLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 20));
   }, []);
 
+  // Sync ref con lo stato
+  useEffect(() => {
+    isModelReadyRef.current = isModelReady;
+  }, [isModelReady]);
+
   // 1. RICHIESTA PERMESSI
   const requestPermissions = async () => {
     if (Platform.OS === 'android') {
       try {
-        await PermissionsAndroid.requestMultiple([
+        const permissions = [
           PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-          PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
-          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
-        ]);
+        ];
+
+        if (Platform.Version >= 33) {
+          permissions.push(PermissionsAndroid.PERMISSIONS.READ_MEDIA_AUDIO);
+        } else {
+          permissions.push(PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE);
+          permissions.push(PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE);
+        }
+
+        const grants = await PermissionsAndroid.requestMultiple(permissions);
+        addLog("Permessi aggiornati.");
       } catch (err) {
         addLog("Errore permessi: " + err);
       }
@@ -44,7 +58,6 @@ export function useWhisperTranscriber() {
       if (exists) {
         try {
           const stats = await RNFS.stat(MODEL_PATH);
-          // Il modello Tiny è circa 75MB, controlliamo che sia almeno 70MB
           if (parseInt(stats.size) > 70000000) {
             setIsModelReady(true);
             addLog("Modello Tiny pronto.");
@@ -56,13 +69,12 @@ export function useWhisperTranscriber() {
         } catch (e) {
           setIsModelReady(false);
         }
-      } else {
       }
     };
     init();
-  }, []); // Esegui solo all'avvio
+  }, []);
 
-  // 3. GESTIONE INTENT (WhatsApp / Telegram)
+  // 3. GESTIONE INTENT
   useEffect(() => {
     addLog("Sistema ricezione attivo.");
     ReceiveSharingIntent.getReceivedFiles(
@@ -86,15 +98,14 @@ export function useWhisperTranscriber() {
     );
   }, []);
 
-  // 4. CONVERSIONE FFMPEG (Ottimizzata per S25 Ultra)
+  // 4. CONVERSIONE FFMPEG
   const convertToWav = async (inputPath: string): Promise<string | null> => {
     const outputPath = `${RNFS.CachesDirectoryPath}/audio_16k.wav`;
     
     try {
       if (await RNFS.exists(outputPath)) await RNFS.unlink(outputPath);
       
-      addLog("FFmpeg: Elaborazione audio in corso...");
-      // Comando per forzare 16kHz Mono PCM (richiesto da Whisper)
+      addLog("FFmpeg: Elaborazione audio...");
       const session = await FFmpegKit.execute(
         `-y -i "${inputPath}" -ar 16000 -ac 1 -c:a pcm_s16le "${outputPath}"`
       );
@@ -113,10 +124,12 @@ export function useWhisperTranscriber() {
     }
   };
 
-  // 5. TRASCRIZIONE (Uso intensivo CPU/NPU)
+  // 5. TRASCRIZIONE
   const transcribeAudio = async (wavPath: string) => {
-    if (!isModelReady) {
-      Alert.alert("Modello non pronto", "Scarica il modello Medium prima di trascrivere.");
+    // Controllo ref e file fisico per sicurezza
+    const fileExists = await RNFS.exists(MODEL_PATH);
+    if (!isModelReadyRef.current && !fileExists) {
+      addLog("Modello non pronto. Scarica il modello Tiny.");
       return;
     }
 
@@ -124,11 +137,13 @@ export function useWhisperTranscriber() {
       setStatus('TRANSCRIBING');
       addLog("Whisper: Caricamento motore...");
 
+      const cleanModelPath = MODEL_PATH.startsWith('file://') ? MODEL_PATH.substring(7) : MODEL_PATH;
+
       if (!whisperRef.current) {
-        whisperRef.current = await initWhisper({ filePath: MODEL_PATH });
+        whisperRef.current = await initWhisper({ filePath: cleanModelPath });
       }
 
-      addLog("Whisper: Trascrizione avviata (4 Threads)...");
+      addLog("Whisper: Trascrizione avviata...");
       const { promise } = whisperRef.current.transcribe(wavPath, {
         language: 'it',
         maxThreads: 4,
@@ -137,7 +152,7 @@ export function useWhisperTranscriber() {
 
       const result = await promise;
       setTranscription(result.result.trim());
-      addLog("✅ Trascrizione completata con successo.");
+      addLog("✅ Trascrizione completata.");
     } catch (error: any) {
       addLog("Errore Whisper: " + error.message);
     } finally {
@@ -165,7 +180,7 @@ export function useWhisperTranscriber() {
     if (status === 'DOWNLOADING') return;
 
     setStatus('DOWNLOADING');
-    addLog("Download: Avvio scaricamento Medium Model...");
+    addLog("Download: Avvio scaricamento Tiny Model...");
 
     let lastUpdate = 0;
 
