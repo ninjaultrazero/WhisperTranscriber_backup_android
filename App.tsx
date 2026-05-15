@@ -56,7 +56,7 @@ export default function App() {
             <Card style={styles.card} mode="contained">
               <Card.Title
                 title="Stato del Modello AI"
-                subtitle={isModelReady ? "Modello Tiny caricato" : "Modello non presente"}
+                subtitle={isModelReady ? "Modello Small caricato" : "Modello non presente"}
                 left={(props) => (
                   <Avatar.Icon 
                     {...props} 
@@ -116,7 +116,7 @@ export default function App() {
                 style={styles.btnDownload}
                 contentStyle={{ height: 50 }}
               >
-                Scarica Modello Tiny (75MB)
+                Scarica Modello Small (465MB)
               </Button>
             ) : (
               <Button 

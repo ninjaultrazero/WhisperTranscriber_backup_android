@@ -6,8 +6,8 @@ import { FFmpegKit, ReturnCode } from 'ffmpeg-kit-react-native';
 import ReceiveSharingIntent from 'react-native-receive-sharing-intent';
 import { useWhisper } from 'whisper.rn/src';
 import { RealtimeTranscriber } from 'whisper.rn/realtime-transcription';
-const MODEL_PATH = `${RNFS.DocumentDirectoryPath}/ggml-tiny.bin`;
-const MODEL_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin";
+const MODEL_PATH = `${RNFS.DocumentDirectoryPath}/ggml-small.bin`;
+const MODEL_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-small.bin";
 
 export function useWhisperTranscriber() {
   const [status, setStatus] = useState<'IDLE' | 'DOWNLOADING' | 'CONVERTING' | 'TRANSCRIBING'>('IDLE');
@@ -58,9 +58,10 @@ export function useWhisperTranscriber() {
       if (exists) {
         try {
           const stats = await RNFS.stat(MODEL_PATH);
-          if (parseInt(stats.size) > 70000000) {
+          // Il modello Small è circa 460MB, controlliamo che sia almeno 450MB
+          if (parseInt(stats.size) > 450000000) {
             setIsModelReady(true);
-            addLog("Modello Tiny pronto.");
+            addLog("Modello Small pronto.");
           } else {
             addLog("Modello incompleto. Riesegui download.");
             await RNFS.unlink(MODEL_PATH);
@@ -129,7 +130,7 @@ export function useWhisperTranscriber() {
     // Controllo ref e file fisico per sicurezza
     const fileExists = await RNFS.exists(MODEL_PATH);
     if (!isModelReadyRef.current && !fileExists) {
-      addLog("Modello non pronto. Scarica il modello Tiny.");
+      addLog("Modello non pronto. Scarica il modello Small.");
       return;
     }
 
@@ -180,7 +181,7 @@ export function useWhisperTranscriber() {
     if (status === 'DOWNLOADING') return;
 
     setStatus('DOWNLOADING');
-    addLog("Download: Avvio scaricamento Tiny Model...");
+    addLog("Download: Avvio scaricamento Small Model...");
 
     let lastUpdate = 0;
 
