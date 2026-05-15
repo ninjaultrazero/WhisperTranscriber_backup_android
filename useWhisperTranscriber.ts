@@ -6,8 +6,8 @@ import { FFmpegKit, ReturnCode } from 'ffmpeg-kit-react-native';
 import ReceiveSharingIntent from 'react-native-receive-sharing-intent';
 import { useWhisper } from 'whisper.rn/src';
 import { RealtimeTranscriber } from 'whisper.rn/realtime-transcription';
-const MODEL_PATH = `${RNFS.DocumentDirectoryPath}/ggml-medium.bin`;
-const MODEL_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin";
+const MODEL_PATH = `${RNFS.DocumentDirectoryPath}/ggml-tiny.bin`;
+const MODEL_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin";
 
 export function useWhisperTranscriber() {
   const [status, setStatus] = useState<'IDLE' | 'DOWNLOADING' | 'CONVERTING' | 'TRANSCRIBING'>('IDLE');
@@ -21,16 +21,15 @@ export function useWhisperTranscriber() {
     setLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 20));
   }, []);
 
-  // 1. RICHIESTA PERMESSI (Fondamentale su Android 14/S25 Ultra)
+  // 1. RICHIESTA PERMESSI
   const requestPermissions = async () => {
     if (Platform.OS === 'android') {
       try {
-        const grants = await PermissionsAndroid.requestMultiple([
+        await PermissionsAndroid.requestMultiple([
           PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
           PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
           PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
         ]);
-        addLog("Permessi controllati.");
       } catch (err) {
         addLog("Errore permessi: " + err);
       }
@@ -45,53 +44,47 @@ export function useWhisperTranscriber() {
       if (exists) {
         try {
           const stats = await RNFS.stat(MODEL_PATH);
-          // Controllo che il file sia almeno 1.4GB (non corrotto)
-          if (parseInt(stats.size) > 1400000000) {
+          // Il modello Tiny è circa 75MB, controlliamo che sia almeno 70MB
+          if (parseInt(stats.size) > 70000000) {
             setIsModelReady(true);
-            addLog("Modello Medium pronto (1.5GB).");
+            addLog("Modello Tiny pronto.");
           } else {
-            addLog("Modello corrotto o incompleto. Scarica di nuovo.");
+            addLog("Modello incompleto. Riesegui download.");
             await RNFS.unlink(MODEL_PATH);
+            setIsModelReady(false);
           }
         } catch (e) {
           setIsModelReady(false);
         }
       } else {
-        addLog("In attesa del download del modello...");
       }
     };
     init();
-  }, [addLog]);
+  }, []); // Esegui solo all'avvio
 
   // 3. GESTIONE INTENT (WhatsApp / Telegram)
-  // 3. GESTIONE INTENT (WhatsApp / Telegram)
   useEffect(() => {
+    addLog("Sistema ricezione attivo.");
     ReceiveSharingIntent.getReceivedFiles(
      (files: any[]) => {
        if (files && files.length > 0) {
         const file = files[0];
         const path = file.filePath || file.contentUri;
         if (path) {
-          addLog(`Ricevuto audio: ${file.fileName || 'Vocale'}`);
+          addLog("Ricevuto file audio.");
           handleIncomingFile(path);
         }
       }
     },
     (err: any) => {
-      // Ignoriamo silenziosamente l'errore "intent is null"
-     // perché significa semplicemente che l'app è stata aperta normalmente
-    const errorMsg = String(err);
-    if (!errorMsg.toLowerCase().includes("intent is null")) {
-      addLog("Errore Intent: " + errorMsg);
-    }
-  },
-  "WhisperTranscriber"
-  );
-
-    // Rimuoviamo il clearReceivedFiles dal ciclo di smontaggio se legato a isModelReady
-   // altrimenti ci brucia l'intent mentre scarichiamo il modello.
-    // Lasciamo l'array delle dipendenze vuoto per farlo girare una sola volta!
-  }, []); // <-- CHIAVE DELLA SOLUZIONE: array vuoto
+      const errorMsg = String(err);
+      if (!errorMsg.toLowerCase().includes("intent is null")) {
+        addLog("Errore Intent: " + errorMsg);
+      }
+    },
+    "WhisperTranscriber"
+    );
+  }, []);
 
   // 4. CONVERSIONE FFMPEG (Ottimizzata per S25 Ultra)
   const convertToWav = async (inputPath: string): Promise<string | null> => {
@@ -135,10 +128,10 @@ export function useWhisperTranscriber() {
         whisperRef.current = await initWhisper({ filePath: MODEL_PATH });
       }
 
-      addLog("Whisper: Trascrizione avviata (8 Threads)...");
+      addLog("Whisper: Trascrizione avviata (4 Threads)...");
       const { promise } = whisperRef.current.transcribe(wavPath, {
         language: 'it',
-        maxThreads: 8, // Sfrutta lo Snapdragon 8 Elite
+        maxThreads: 4,
         temperature: 0,
       });
 

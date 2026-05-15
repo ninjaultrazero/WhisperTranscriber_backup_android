@@ -56,7 +56,7 @@ export default function App() {
             <Card style={styles.card} mode="contained">
               <Card.Title
                 title="Stato del Modello"
-                subtitle={isModelReady ? "Medium Model caricato" : "Modello non presente"}
+                subtitle={isModelReady ? "Medium Tiny caricato" : "Modello non presente"}
                 left={(props) => (
                   <Avatar.Icon 
                     {...props} 
@@ -116,17 +116,22 @@ export default function App() {
                 style={styles.btnDownload}
                 contentStyle={{ height: 50 }}
               >
-                Scarica Modello Medium (1.5GB)
+                Scarica Modello Tiny (75MB)
               </Button>
             ) : (
               <Button 
                 mode="contained" 
                 icon="microphone" 
-                onPress={() => {}} // Qui potresti aggiungere la registrazione live
+                onPress={() => {
+                  if (status === 'IDLE') {
+                    // Se non abbiamo un file, suggeriamo di condividerlo
+                    setTranscription("Per provare, condividi un file audio da WhatsApp o Telegram verso questa app.");
+                  }
+                }}
                 style={[styles.btnReady, { backgroundColor: getStatusColor() }]}
                 contentStyle={{ height: 50 }}
               >
-                {status === 'IDLE' ? "Modello Pronto" : "Elaborazione..."}
+                {status === 'IDLE' ? "Pronto (Condividi un audio)" : "Elaborazione..."}
               </Button>
             )}
           </View>
