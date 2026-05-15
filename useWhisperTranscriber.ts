@@ -174,13 +174,22 @@ export function useWhisperTranscriber() {
     setStatus('DOWNLOADING');
     addLog("Download: Avvio scaricamento Medium Model...");
 
+    let lastUpdate = 0;
+
     const options = {
       fromUrl: MODEL_URL,
       toFile: MODEL_PATH,
       background: true,
+      progressInterval: 1000,
       progress: (res: any) => {
-        const p = res.bytesWritten / res.contentLength;
-        setProgress(p);
+        const now = Date.now();
+        // Limita gli aggiornamenti a massimo uno ogni 1000ms (1 secondo)
+        // per evitare il blocco "Excessive number of pending callbacks"
+        if (now - lastUpdate > 1000) {
+          const p = res.bytesWritten / res.contentLength;
+          setProgress(p);
+          lastUpdate = now;
+        }
       },
     };
 

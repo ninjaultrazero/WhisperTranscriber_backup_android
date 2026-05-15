@@ -34,11 +34,11 @@ allprojects {
 
     configurations.all {
         resolutionStrategy {
-            force "com.facebook.react:react-android:0.74.5"
-            force "com.facebook.react:hermes-android:0.74.5"
+            force "com.facebook.react:react-android:0.76.5"
+            force "com.facebook.react:hermes-android:0.76.5"
         }
         resolutionStrategy.dependencySubstitution {
-            substitute module("com.facebook.react:react-native") using module("com.facebook.react:react-android:0.74.5")
+            substitute module("com.facebook.react:react-native") using module("com.facebook.react:react-android:0.76.5")
         }
     }
 
@@ -76,7 +76,7 @@ allprojects {
                         targetCompatibility JavaVersion.VERSION_17
                     }
                     
-                    if (project.name == 'whisper.rn') {
+                    if (project.name == 'whisper.rn' || project.name == 'react-native-safe-area-context') {
                         defaultConfig.externalNativeBuild.cmake.arguments.addAll([
                             "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON",
                             "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384"
