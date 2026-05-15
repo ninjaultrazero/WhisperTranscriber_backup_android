@@ -4,15 +4,15 @@ buildscript {
         minSdkVersion = 24
         compileSdkVersion = 34
         targetSdkVersion = 34
-        ndkVersion = "27.0.12077973"
-        kotlinVersion = "2.1.0"
+        ndkVersion = "26.1.10909125"
+        kotlinVersion = "1.9.24"
     }
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:8.5.1")
+        classpath("com.android.tools.build:gradle:8.1.1")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
 
     }
@@ -20,20 +20,67 @@ buildscript {
 
 allprojects {
     repositories {
+        maven {
+            // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
+            url("$rootDir/../node_modules/react-native/android")
+        }
+        maven {
+            url("$rootDir/../node_modules/jsc-android/dist")
+        }
         google()
         mavenCentral()
+        maven { url 'https://www.jitpack.io' }
     }
 
-    // Configurazione per il supporto 16KB nei moduli nativi
+    configurations.all {
+        resolutionStrategy {
+            force "com.facebook.react:react-android:0.74.5"
+            force "com.facebook.react:hermes-android:0.74.5"
+        }
+        resolutionStrategy.dependencySubstitution {
+            substitute module("com.facebook.react:react-native") using module("com.facebook.react:react-android:0.74.5")
+        }
+    }
+
+    // Configurazione per il supporto 16KB nei moduli nativi e fix per namespace mancanti (AGP 8.x)
     subprojects {
         afterEvaluate { project ->
             if (project.hasProperty('android')) {
                 project.android {
+                    buildFeatures {
+                        buildConfig true
+                        prefab true
+                    }
+                    // Fix per AGP 8.x: il namespace deve essere in build.gradle, non nel manifest
+                    if (namespace == null) {
+                        try {
+                            def manifestFile = project.file('src/main/AndroidManifest.xml')
+                            if (manifestFile.exists()) {
+                                def manifest = new XmlParser().parse(manifestFile)
+                                def pkg = manifest.attribute('package')
+                                if (pkg) {
+                                    namespace = pkg
+                                    // Opzionale: rimuovi dal manifest per evitare warning/errori
+                                    // manifestFile.text = manifestFile.text.replace("package=\"$pkg\"", "")
+                                }
+                            }
+                        } catch (Exception e) {
+                            namespace = project.group
+                        }
+                    }
+                    
                     ndkVersion = rootProject.ext.ndkVersion
                     
+                    compileOptions {
+                        sourceCompatibility JavaVersion.VERSION_17
+                        targetCompatibility JavaVersion.VERSION_17
+                    }
+                    
                     if (project.name == 'whisper.rn') {
-                        defaultConfig.externalNativeBuild.cmake.arguments << "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
-                        defaultConfig.externalNativeBuild.cmake.arguments << "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384"
+                        defaultConfig.externalNativeBuild.cmake.arguments.addAll([
+                            "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON",
+                            "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384"
+                        ])
                     }
                 }
             }

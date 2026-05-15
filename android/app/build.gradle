@@ -1,45 +1,53 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("com.facebook.react")
-}
-
-react {
-    autolinkLibrariesWithApp()
-    newArchEnabled = false
-    hermesEnabled = true
 }
 
 android {
-    ndkVersion "27.0.12077973"
-    compileSdk 34
+    ndkVersion rootProject.ext.ndkVersion
+    compileSdkVersion rootProject.ext.compileSdkVersion
     namespace "com.whispertranscriber"
+
+    signingConfigs {
+        debug {
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+            manifestPlaceholders = [usesCleartextTraffic: "true"]
+        }
+        release {
+            // Se non hai un keystore di release, usa quello di debug per ora
+            signingConfig signingConfigs.debug
+            minifyEnabled false
+            manifestPlaceholders = [usesCleartextTraffic: "false"]
+        }
+    }
 
     defaultConfig {
         applicationId "com.whispertranscriber"
-        minSdkVersion 24
-        targetSdkVersion 34
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
 
         buildConfigField("boolean", "IS_NEW_ARCHITECTURE_ENABLED", "false")
         buildConfigField("boolean", "IS_HERMES_ENABLED", "true")
-
-        // Fondamentale per Whisper (C++)
-        externalNativeBuild {
-            cmake {
-                abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"
-                arguments "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON"
-            }
-        }
     }
 
-    // Serve per compilare il codice nativo di Whisper
-    externalNativeBuild {
-        cmake {
-            path "CMakeLists.txt"
-        }
+    buildFeatures {
+        prefab true
+        buildConfig true
     }
+
+    // Serve per compilare il codice nativo di Whisper (Rimosso perché causa errore se non ci sono sorgenti in legacy mode)
+
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
@@ -54,9 +62,6 @@ android {
         jniLibs {
             useLegacyPackaging = true
             keepDebugSymbols += ["**/*.so"]
-        }
-        // Risolve i conflitti di librerie duplicate tra RN e FFmpeg
-        resources {
             pickFirsts += [
                     '**/libc++_shared.so',
                     '**/libfbjni.so',
@@ -69,7 +74,7 @@ android {
 }
 
 dependencies {
-    implementation("com.facebook.react:react-android")
+    implementation("com.facebook.react:react-android:0.74.5")
 
     // FFmpeg con supporto 16KB
     implementation 'com.moizhassan.ffmpeg:ffmpeg-kit-16kb:6.1.1'
@@ -80,10 +85,11 @@ dependencies {
     implementation(project(':ffmpeg-kit-react-native'))
 
     if (hermesEnabled.toBoolean()) {
-        implementation("com.facebook.react:hermes-android")
+        implementation("com.facebook.react:hermes-android:0.74.5")
     } else {
         implementation jscFlavor
     }
 }
 
 apply from: "../../node_modules/react-native-vector-icons/fonts.gradle"
+apply from: file("../../node_modules/react-native/node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)

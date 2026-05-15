@@ -4,7 +4,8 @@ import RNFS from 'react-native-fs';
 import { initWhisper, WhisperContext } from 'whisper.rn';
 import { FFmpegKit, ReturnCode } from 'ffmpeg-kit-react-native';
 import ReceiveSharingIntent from 'react-native-receive-sharing-intent';
-
+import { useWhisper } from 'whisper.rn/src';
+import { RealtimeTranscriber } from 'whisper.rn/realtime-transcription';
 const MODEL_PATH = `${RNFS.DocumentDirectoryPath}/ggml-medium.bin`;
 const MODEL_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin";
 
